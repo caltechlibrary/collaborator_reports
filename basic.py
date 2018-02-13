@@ -1,0 +1,124 @@
+import os,subprocess,json,csv,collections
+from datetime import date,timedelta
+import requests
+from clint.textui import progress
+
+class Coauthor:
+    def __init__(self,ca_id,name,affiliation,year):
+        self.ca_id = ca_id
+        self.name = name
+        self.affiliations = [affiliation]
+        self.years = [year]
+    def write(self):
+        alist = ''
+        for a in self.affiliations:
+            alist = alist +','+a
+        ylist = ''
+        for y in self.years:
+            ylist = ylist + ','+ str(y)
+        nlist = ''
+        for n in self.name:
+            nlist = nlist + ','+str(n)
+        json = {'ca_id':self.ca_id,\
+                #'name':nlist,\
+                'affiliations':alist,\
+                'years':ylist}
+        return json
+
+#os.environ['AWS_SDK_LOAD_CONFIG']="1"
+
+#path = "s3://dataset.library.caltech.edu/CaltechAUTHORS"
+path="CaltechAUTHORS"
+#path="sample"
+
+#print("Updating data from CaltechAUTHORS")
+#Should drop in an s3 syns command
+#subprocess.run(['dsindexer','-c',path,'-update','authors.json','authors.bleve'])
+
+#Get input
+name = input("Enter a CaltechAUTHORS author id (e.g. Readhead-A-C-S):")
+
+response =\
+        subprocess.check_output(['dsfind','-json','-size','10000','authors.bleve','authors:'+name],universal_newlines=True)
+response = json.loads(response)
+keys = []
+for h in response['hits']:
+    keys.append(h['fields']['keyv'])
+
+coauthors = []
+
+count = 0
+for k in keys:
+    #print(k)
+    count = count + 1
+    if count % 100 == 0:
+        print(count)
+    metadata = subprocess.check_output(["dataset","-c",path,"read",str(k)],universal_newlines=True)
+    metadata = json.loads(metadata)
+    #Pull out date
+    if 'date' in metadata:
+        split = metadata['date'].split('-')
+        if len(split) == 3:
+            publication_date = date(int(split[0]),int(split[1]),int(split[2]))
+        elif len(split) == 2:
+            publication_date = date(int(split[0]),int(split[1]),1)
+        elif len(split) == 1:
+            publication_date = date(int(split[0]),1,1)
+        else:
+            print("Record "+str(k)+"has a weird date - error")
+            break
+        today = date.today()
+        time_lag = timedelta(days=1460) #We care about records in the past four years
+        cutoff = today - time_lag
+        keep = publication_date > cutoff
+    else:
+        print("Record "+str(k)+"does not have date, will be included anyway")
+        publication_date = ''
+        keep = True
+    #We're going to do further processing
+    if keep == True:
+        #Add DOI lookup here
+        affiliation = ''
+
+        authors = metadata['creators']
+        for a in authors:
+            if a['id'] != name:
+                coauthors.append(Coauthor(a['id'],a['family']+','+a['given'],'',publication_date.year))
+        print(len(coauthors))
+
+#Dedupe
+deduped = []
+for cnt in range(len(coauthors)):
+    subject = coauthors.pop()
+    dupe = False
+    for d in deduped:
+        if d.ca_id == subject.ca_id:
+            dupe = True
+            if d.affiliations != subject.affiliations:
+                d.affiliations = d.affiliations + subject.affiliations
+            if d.years != subject.years:
+                d.years = d.years + subject.years
+            if d.name != subject.name:
+                d.name = [d.name,subject.name]
+    if dupe == False:
+        deduped.append(subject)
+
+print(len(deduped))
+subprocess.run(['dataset','init','collaborators'])
+for d in deduped:
+    #outjson =\
+            #{'id':d.ca_id,'name':d.name,'years':d.years,'affiliations':d.affiliations}
+    subprocess.run(['dataset','-i','-','-c','collaborators','create',d.ca_id],\
+                            input=json.dumps(d.write()),universal_newlines=True)
+#Export to Google Sheet
+os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
+
+#Google sheet ID for output
+output_sheet = "1_p054rcvNzPM3MfvCJJP_zWXVxACWwHqI82qTsd1CoQ"
+sheet_name = "Sheet1"
+sheet_range = "A1:CZ"
+export_list = ".ca_id,.name,.years,.affiliations"
+title_list = "id,name,years,affiliations"
+subprocess.run(['dataset','-c','collaborators','export-gsheet',\
+                    output_sheet,sheet_name,sheet_range,'true',export_list,title_list])
+
