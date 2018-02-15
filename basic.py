@@ -4,25 +4,41 @@ import requests
 from clint.textui import progress
 
 class Coauthor:
-    def __init__(self,ca_id,name,affiliation,year):
+    def __init__(self,ca_id,name,affiliation,year,link):
         self.ca_id = ca_id
-        self.name = name
+        self.names = [name]
         self.affiliations = [affiliation]
         self.years = [year]
+        self.links = [link]
     def write(self):
         alist = ''
         for a in self.affiliations:
-            alist = alist +','+a
-        ylist = ''
+            if alist == '':
+                alist = a
+            else:
+                alist = alist +'; '+a
+        #Want the latest year
+        year = 0
         for y in self.years:
-            ylist = ylist + ','+ str(y)
+            if y > year:
+                year = y
         nlist = ''
-        for n in self.name:
-            nlist = nlist + ','+str(n)
+        for n in self.names:
+            if nlist == '':
+                nlist = n
+            else:
+                nlist = nlist +'; '+n
+        llist = ''
+        for l in self.links:
+            if llist == '':
+                llist = l
+            else:
+                llist = llist +'; '+str(l)
         json = {'ca_id':self.ca_id,\
-                #'name':nlist,\
+                'names':nlist,\
                 'affiliations':alist,\
-                'years':ylist}
+                'years':year,\
+                'links':llist}
         return json
 
 #os.environ['AWS_SDK_LOAD_CONFIG']="1"
@@ -80,10 +96,11 @@ for k in keys:
         #Add DOI lookup here
         affiliation = ''
 
+        link = metadata['official_url']
         authors = metadata['creators']
         for a in authors:
             if a['id'] != name:
-                coauthors.append(Coauthor(a['id'],a['family']+','+a['given'],'',publication_date.year))
+                coauthors.append(Coauthor(a['id'],a['family']+','+a['given'],'',publication_date.year,link))
         print(len(coauthors))
 
 #Dedupe
@@ -94,12 +111,14 @@ for cnt in range(len(coauthors)):
     for d in deduped:
         if d.ca_id == subject.ca_id:
             dupe = True
-            if d.affiliations != subject.affiliations:
+            if subject.affiliations not in d.affiliations:
                 d.affiliations = d.affiliations + subject.affiliations
-            if d.years != subject.years:
+            if subject.years not in d.years:
                 d.years = d.years + subject.years
-            if d.name != subject.name:
-                d.name = [d.name,subject.name]
+            if subject.names not in d.names:
+                d.names = d.names + subject.names
+            if subject.links not in d.links:
+                d.links = d.links + subject.links
     if dupe == False:
         deduped.append(subject)
 
@@ -117,7 +136,7 @@ os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 output_sheet = "1_p054rcvNzPM3MfvCJJP_zWXVxACWwHqI82qTsd1CoQ"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
-export_list = ".ca_id,.name,.years,.affiliations"
+export_list = ".ca_id,.names,.years,.affiliations,.links"
 title_list = "id,name,years,affiliations"
 subprocess.run(['dataset','-c','collaborators','export-gsheet',\
                     output_sheet,sheet_name,sheet_range,'true',export_list,title_list])
