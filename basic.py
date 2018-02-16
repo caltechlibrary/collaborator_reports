@@ -13,10 +13,11 @@ class Coauthor:
     def write(self):
         alist = ''
         for a in self.affiliations:
-            if alist == '':
-                alist = a
-            else:
-                alist = alist +'; '+a
+            if a != ' ':
+                if alist == '':
+                    alist = a
+                else:
+                    alist = alist +'; '+a
         #Want the latest year
         year = 0
         for y in self.years:
@@ -93,14 +94,44 @@ for k in keys:
         keep = True
     #We're going to do further processing
     if keep == True:
-        #Add DOI lookup here
-        affiliation = ''
-
+        #DOI lookup
+        url = 'https://api.crossref.org/works/'
+        tag = ''
+        affiliation = []
+        if 'related_url' in metadata:
+            for r in metadata['related_url']:
+                if r['type'] == 'doi':
+                    if r['description'] == 'Article':
+                        split = r['url'].split('/')
+                        doi = ''
+                        for s in range(len(split)):
+                            if s == 3:
+                                doi = split[s]
+                            if s > 3:
+                                doi = doi + '/'+split[s]
+                        response = requests.get(url+doi+tag)
+                        for anum in range(len(metadata['creators'])):
+                            a = metadata['creators'][anum]
+                            for author in response.json()['message']['author']:
+                                if 'family' in author:
+                                    if author['family'] == a['family']:
+                                        if author['given'] == a['given']:
+                                            if author['affiliation'] != []:
+                                                affiliation.append(author['affiliation'])
+                                            elif 'ORCID' in author:
+                                                affiliation.append(author['ORCID'])
+                            if len(affiliation) != anum+1:
+                                affiliation.append(' ')
         link = metadata['official_url']
         authors = metadata['creators']
-        for a in authors:
+        for anum in range(len(authors)):
+            a = authors[anum]
+            if len(affiliation) != 0:
+                affil = affiliation[anum]
+            else:
+                affil = ''
             if a['id'] != name:
-                coauthors.append(Coauthor(a['id'],a['family']+','+a['given'],'',publication_date.year,link))
+                coauthors.append(Coauthor(a['id'],a['family']+','+a['given'],affil,publication_date.year,link))
         print(len(coauthors))
 
 #Dedupe
