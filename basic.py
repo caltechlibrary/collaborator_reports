@@ -1,6 +1,8 @@
 import os,subprocess,json,csv,collections
 from datetime import date,timedelta
 import requests
+import ads
+import dataset
 from clint.textui import progress
 
 class Coauthor:
@@ -49,7 +51,7 @@ path="CaltechAUTHORS"
 #path="sample"
 
 #print("Updating data from CaltechAUTHORS")
-#Should drop in an s3 syns command
+#Should drop in a s3 sync command
 #subprocess.run(['dsindexer','-c',path,'-update','authors.json','authors.bleve'])
 
 #Get input
@@ -60,7 +62,7 @@ response =\
 response = json.loads(response)
 keys = []
 for h in response['hits']:
-    keys.append(h['fields']['keyv'])
+    keys.append(h['id'])
 
 coauthors = []
 
@@ -68,8 +70,8 @@ count = 0
 for k in keys:
     #print(k)
     count = count + 1
-    if count % 100 == 0:
-        print(count)
+    #if count % 100 == 0:
+    #    print(count)
     metadata = subprocess.check_output(["dataset","-c",path,"read",str(k)],universal_newlines=True)
     metadata = json.loads(metadata)
     #Pull out date
@@ -89,14 +91,12 @@ for k in keys:
         cutoff = today - time_lag
         keep = publication_date > cutoff
     else:
-        print("Record "+str(k)+"does not have date, will be included anyway")
+        print("Record "+str(k)+"does not have date, discarding")
         publication_date = ''
-        keep = True
+        keep = False
     #We're going to do further processing
     if keep == True:
-        #DOI lookup
-        url = 'https://api.crossref.org/works/'
-        tag = ''
+        #Try to find affiliations
         affiliation = []
         if 'related_url' in metadata:
             for r in metadata['related_url']:
@@ -109,7 +109,31 @@ for k in keys:
                                 doi = split[s]
                             if s > 3:
                                 doi = doi + '/'+split[s]
+                        #Crossref lookup
+                        url = 'https://api.crossref.org/works/'
+                        tag = ''
                         response = requests.get(url+doi+tag)
+                        #ADS lookup - save records to Dataset to avoid rate limit
+                        collection = "ads"
+                        if os.path.exists(collection) == False:
+                            dataset.init_collection(collection)
+                        if dataset.has_key(collection,doi):
+                            paper = dataset.read_record(collection,doi)
+                        else:
+                            print(doi)
+                            print("Downloading from ADS")
+                            papers = ads.SearchQuery(doi=doi,fl=['aff','author'])
+                            c = 0
+                            for p in papers:
+                                if c > 0:
+                                    print("Multiple papers found from ADS for"+doi)
+                                else:
+                                    paper = {'aff':p.aff,'author':p.author}
+                                    ok = dataset.create_record(collection,doi,paper)
+                                c = c + 1
+                        ads_affiliations = paper['aff']
+                        ads_authors = paper['author']
+                        #We're going to go through all authors listed in CaltechAUTHORS
                         for anum in range(len(metadata['creators'])):
                             a = metadata['creators'][anum]
                             for author in response.json()['message']['author']:
@@ -118,10 +142,19 @@ for k in keys:
                                         if author['given'] == a['given']:
                                             if author['affiliation'] != []:
                                                 affiliation.append(author['affiliation'])
-                                            elif 'ORCID' in author:
-                                                affiliation.append(author['ORCID'])
+                                            #elif 'ORCID' in author:
+                                            #    affiliation.append(author['ORCID'])
+                            if len(affiliation) != anum+1:
+                                #Check ADS Data
+                                index = 0
+                                for author in ads_authors:
+                                    family = author.split(',')[0]
+                                    if family == a['family']:
+                                        affiliation.append(ads_affiliations[index])
+                                    index = index + 1
                             if len(affiliation) != anum+1:
                                 affiliation.append(' ')
+
         link = metadata['official_url']
         authors = metadata['creators']
         for anum in range(len(authors)):
@@ -158,7 +191,7 @@ subprocess.run(['dataset','init','collaborators'])
 for d in deduped:
     #outjson =\
             #{'id':d.ca_id,'name':d.name,'years':d.years,'affiliations':d.affiliations}
-    subprocess.run(['dataset','-i','-','-c','collaborators','create',d.ca_id],\
+    subprocess.run(['dataset','-i','-','-c','collaborators','update',d.ca_id],\
                             input=json.dumps(d.write()),universal_newlines=True)
 #Export to Google Sheet
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"

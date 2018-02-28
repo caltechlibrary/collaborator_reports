@@ -1,9 +1,9 @@
 {"authors":{
     "object_path":".creators[:].id",
-    "analyzer": "simple"
+    "analyzer": "keyword"
     },
  "keyv":{
     "object_path":".id",
-    "analyzer": "simple"
+    "analyzer": "keyword"
     }
 }
