@@ -20,9 +20,6 @@ class Coauthor:
                     alist = a
                 else:
                     split = alist.split(';')
-                    print(a)
-                    print(split)
-                    print(a not in split)
                     if a not in split:
                         alist = alist +'; '+a
         #Want the latest year
@@ -197,11 +194,10 @@ for cnt in range(len(coauthors)):
         deduped.append(subject)
 
 print(len(deduped))
+subprocess.run(['rm','-rf','collaborators'])
 subprocess.run(['dataset','init','collaborators'])
 for d in deduped:
-    #outjson =\
-            #{'id':d.ca_id,'name':d.name,'years':d.years,'affiliations':d.affiliations}
-    subprocess.run(['dataset','-quiet','-nl','False','-i','-','-c','collaborators','update',d.ca_id],\
+    subprocess.run(['dataset','-quiet','-nl','false','-i','-','-c','collaborators','create',d.ca_id],\
                             input=json.dumps(d.write()),universal_newlines=True)
 #Export to Google Sheet
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
