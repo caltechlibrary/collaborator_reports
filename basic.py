@@ -109,6 +109,7 @@ for k in keys:
                                 doi = split[s]
                             if s > 3:
                                 doi = doi + '/'+split[s]
+                        doi = doi.strip() #trim leading/trailing spaces
                         #Crossref lookup
                         url = 'https://api.crossref.org/works/'
                         tag = ''
@@ -117,6 +118,8 @@ for k in keys:
                         collection = "ads"
                         if os.path.exists(collection) == False:
                             dataset.init_collection(collection)
+                        #print("dataset -c "+collection+" haskey "+doi)
+                        #print(dataset.has_key(collection,doi))
                         if dataset.has_key(collection,doi):
                             paper = dataset.read_record(collection,doi)
                         else:
@@ -191,7 +194,7 @@ subprocess.run(['dataset','init','collaborators'])
 for d in deduped:
     #outjson =\
             #{'id':d.ca_id,'name':d.name,'years':d.years,'affiliations':d.affiliations}
-    subprocess.run(['dataset','-i','-','-c','collaborators','update',d.ca_id],\
+    subprocess.run(['dataset','-quiet','-nl','False','-i','-','-c','collaborators','update',d.ca_id],\
                             input=json.dumps(d.write()),universal_newlines=True)
 #Export to Google Sheet
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
