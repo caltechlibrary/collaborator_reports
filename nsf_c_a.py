@@ -19,7 +19,12 @@ class Coauthor:
                 if alist == '':
                     alist = a
                 else:
-                    alist = alist +'; '+a
+                    split = alist.split(';')
+                    print(a)
+                    print(split)
+                    print(a not in split)
+                    if a not in split:
+                        alist = alist +'; '+a
         #Want the latest year
         year = 0
         for y in self.years:
@@ -30,7 +35,9 @@ class Coauthor:
             if nlist == '':
                 nlist = n
             else:
-                nlist = nlist +'; '+n
+                split = nlist.split(';')
+                if n not in split:
+                    nlist = nlist +'; '+n
         llist = ''
         for l in self.links:
             if llist == '':
@@ -144,16 +151,16 @@ for k in keys:
                                     if author['family'] == a['family']:
                                         if author['given'] == a['given']:
                                             if author['affiliation'] != []:
-                                                affiliation.append(author['affiliation'])
+                                                affiliation.append(author['affiliation'].strip())
                                             #elif 'ORCID' in author:
                                             #    affiliation.append(author['ORCID'])
                             if len(affiliation) != anum+1:
                                 #Check ADS Data
                                 index = 0
                                 for author in ads_authors:
-                                    family = author.split(',')[0]
+                                    family = author.split(',')[0].strip()
                                     if family == a['family']:
-                                        affiliation.append(ads_affiliations[index])
+                                        affiliation.append(ads_affiliations[index].strip())
                                     index = index + 1
                             if len(affiliation) != anum+1:
                                 affiliation.append(' ')
