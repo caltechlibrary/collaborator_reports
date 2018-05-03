@@ -56,7 +56,8 @@ path="CaltechAUTHORS"
 
 #print("Updating data from CaltechAUTHORS")
 #Should drop in a s3 sync command
-#subprocess.run(['dsindexer','-c',path,'-update','authors.json','authors.bleve'])
+# aws s3 sync s3://dataset.library.caltech.edu/CaltechAUTHORS CaltechAUTHORS
+subprocess.run(['dsindexer','-c',path,'-update','authors.json','authors.bleve'])
 
 #Get input
 name = input("Enter a CaltechAUTHORS author id (e.g. Readhead-A-C-S):")
@@ -197,7 +198,7 @@ print(len(deduped))
 subprocess.run(['rm','-rf','collaborators'])
 subprocess.run(['dataset','init','collaborators'])
 for d in deduped:
-    subprocess.run(['dataset','-quiet','-nl','false','-i','-','-c','collaborators','create',d.ca_id],\
+    subprocess.run(['dataset','-i','-','-c','collaborators','create',d.ca_id],\
                             input=json.dumps(d.write()),universal_newlines=True)
 #Export to Google Sheet
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
