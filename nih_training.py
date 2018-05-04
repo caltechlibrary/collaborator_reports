@@ -76,5 +76,11 @@ for r in records:
         citation = citation + r['title'] + '.'
         if 'publication' in r:
             citation = citation + ' ' + r['publication']
+        if 'volume' in r:
+            citation = citation + ', ' + r['volume'] 
+        if 'number' in r:
+            citation = citation + ' (' + r['number'] +')'
+        if 'pagerange' in r:
+            citation = citation + ' pp. ' + r['pagerange']
         citation = citation + ' ' + r['official_url']
         print(citation)
