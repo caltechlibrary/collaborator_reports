@@ -49,7 +49,7 @@ for a in authors:
                 print("Record "+str(k)+"has a weird date - skipping")
                 publication_date = date(1,1,1)
             today = date.today()
-            time_lag = timedelta(days=532900) #We care about records in the past ten years
+            time_lag = timedelta(days=3600) #We care about records in the past ten years
             cutoff = today - time_lag
             if publication_date > cutoff:
                 author_ids = []
