@@ -60,14 +60,45 @@ headers = {
 #Get input
 name = input("Enter a WOS author id (e.g. READHEAD ACS):")
 
-base_url = 'https://api.clarivate.com/api/wos/?databaseId=WOK&count=100&firstRecord=1'
+base_url = 'https://api.clarivate.com/api/wos/?databaseId=WOK'
+url = base_url + '&count=100&firstRecord=1'
 
 query = urllib.parse.quote_plus('AU=('+name+')')
-url = base_url+'&usrQuery='+query+'&OG=Caltech'
+url = url+'&usrQuery='+query+'&OG=Caltech'
 
-print(url)
 response = requests.get(url,headers=headers)
-print(response.json())
+response = response.json()
+record_count = response['QueryResult']['RecordsFound']
+print(record_count)
+query_id = response['QueryResult']['QueryID']
+records = response['Data']['Records']['records']['REC']
+#We have saved the first 100 records
+record_start = 101
+record_count = record_count-100
+
+query_url = 'https://api.clarivate.com/api/wos/query/'
+
+while record_count > 0:
+    print(record_count)
+    print(len(records),'records')
+    if record_count > 100:
+        url = query_url + str(query_id) + '?count=100&firstRecord=' +\
+            str(record_start)
+        response = requests.get(url,headers=headers)
+        response = response.json()
+        records = records + response['Records']['records']['REC']
+        record_start = record_start + 100
+        record_count = record_count - 100
+    else:
+        url = query_url + str(query_id) + '?count=' +\
+        str(record_count) + '&firstRecord='+ str(record_start)
+        response = requests.get(url,headers=headers)
+        response = response.json()
+        records = records + response['Records']['records']['REC']
+        record_count = 0
+
+print(len(records))
+
 exit()
 
 keys = []
