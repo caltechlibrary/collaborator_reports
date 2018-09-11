@@ -10,7 +10,7 @@ class Coauthor:
     def __init__(self,ca_id,name,affiliation,year,link):
         self.ca_id = ca_id
         self.names = [name]
-        self.affiliations = [affiliation]
+        self.affiliations = affiliation
         self.years = [year]
         self.links = [link]
     def write(self):
@@ -99,25 +99,18 @@ while record_count > 0:
 
 print(len(records))
 
-exit()
-
-keys = []
-for h in response['hits']:
-    keys.append(h['id'])
-
 coauthors = []
 
 count = 0
-for k in keys:
+for r in records:
+    metadata = r['static_data']['summary']
     #print(k)
     count = count + 1
     #if count % 100 == 0:
     #    print(count)
-    metadata = subprocess.check_output(["dataset","-c",path,"read",str(k)],universal_newlines=True)
-    metadata = json.loads(metadata)
     #Pull out date
-    if 'date' in metadata:
-        split = metadata['date'].split('-')
+    if 'sortdate' in metadata['pub_info']:
+        split = metadata['pub_info']['sortdate'].split('-')
         if len(split) == 3:
             publication_date = date(int(split[0]),int(split[1]),int(split[2]))
         elif len(split) == 2:
@@ -137,78 +130,37 @@ for k in keys:
         keep = False
     #We're going to do further processing
     if keep == True:
-        #Try to find affiliations
-        affiliation = []
-        if 'related_url' in metadata:
-            for r in metadata['related_url']:
-                if r['type'] == 'doi':
-                    if r['description'] == 'Article':
-                        split = r['url'].split('/')
-                        doi = ''
-                        for s in range(len(split)):
-                            if s == 3:
-                                doi = split[s]
-                            if s > 3:
-                                doi = doi + '/'+split[s]
-                        doi = doi.strip() #trim leading/trailing spaces
-                        #Crossref lookup
-                        url = 'https://api.crossref.org/works/'
-                        tag = ''
-                        response = requests.get(url+doi+tag)
-                        #ADS lookup - save records to Dataset to avoid rate limit
-                        collection = "ads"
-                        if os.path.exists(collection) == False:
-                            dataset.init_collection(collection)
-                        #print("dataset -c "+collection+" haskey "+doi)
-                        #print(dataset.has_key(collection,doi))
-                        if dataset.has_key(collection,doi):
-                            paper = dataset.read_record(collection,doi)
-                        else:
-                            print(doi)
-                            print("Downloading from ADS")
-                            papers = ads.SearchQuery(doi=doi,fl=['aff','author'])
-                            c = 0
-                            for p in papers:
-                                if c > 0:
-                                    print("Multiple papers found from ADS for"+doi)
-                                else:
-                                    paper = {'aff':p.aff,'author':p.author}
-                                    ok = dataset.create_record(collection,doi,paper)
-                                c = c + 1
-                        ads_affiliations = paper['aff']
-                        ads_authors = paper['author']
-                        #We're going to go through all authors listed in CaltechAUTHORS
-                        for anum in range(len(metadata['creators'])):
-                            a = metadata['creators'][anum]
-                            for author in response.json()['message']['author']:
-                                if 'family' in author:
-                                    if author['family'] == a['family']:
-                                        if author['given'] == a['given']:
-                                            if author['affiliation'] != []:
-                                                affiliation.append(author['affiliation'].strip())
-                                            #elif 'ORCID' in author:
-                                            #    affiliation.append(author['ORCID'])
-                            if len(affiliation) != anum+1:
-                                #Check ADS Data
-                                index = 0
-                                for author in ads_authors:
-                                    family = author.split(',')[0].strip()
-                                    if family == a['family']:
-                                        affiliation.append(ads_affiliations[index].strip())
-                                    index = index + 1
-                            if len(affiliation) != anum+1:
-                                affiliation.append(' ')
+        authors = metadata['names']['name']
+        address_data =\
+        r['static_data']['fullrecord_metadata']['addresses']['address_name']
+        addresses = {}
+        #Set up address dictionary
+        for a in address_data:
+            data = a['address_spec']
+            addresses[data['addr_no']] = data['full_address']
+        link = ''
+        for idv in\
+        r['dynamic_data']['cluster_related']['identifiers']['identifier']:
+            if idv['type'] == 'xref_doi':
+                link = 'https://doi.org/'+idv['value']
+            if idv['type'] == 'doi':
+                link = 'https://doi.org/'+idv['value']
 
-        link = metadata['official_url']
-        authors = metadata['creators']
-        for anum in range(len(authors)):
-            a = authors[anum]
-            if len(affiliation) != 0:
-                affil = affiliation[anum]
-            else:
-                affil = ''
-            if a['id'] != name:
-                coauthors.append(Coauthor(a['id'],a['family']+','+a['given'],affil,publication_date.year,link))
+        for a in authors:
+            if a['role'] == 'author':
+                affil = []
+                if 'addr_no' in a:
+                    if type(a['addr_no']) == int:
+                        affil.append(addresses[a['addr_no']])
+                    else:
+                        addr_list = a['addr_no'].split(' ')
+                        for addr in addr_list:
+                            affil.append(addresses[int(addr)])
+                if 'wos_standard' in a:
+                    coauthors.append(Coauthor(a['wos_standard'],a['full_name'],affil,publication_date.year,link))
+                else:
+                    coauthors.append(Coauthor(a['full_name'],a['full_name'],affil,publication_date.year,link))
+
         print(len(coauthors))
 
 #Dedupe
@@ -240,7 +192,7 @@ for d in deduped:
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 
 #Google sheet ID for output
-output_sheet = "1_p054rcvNzPM3MfvCJJP_zWXVxACWwHqI82qTsd1CoQ"
+output_sheet = "19ze6U2jx8HaUZgYU4OBROAGXNvU7cEtfX_h1DDA3_I0"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 export_list = ".ca_id,.names,.years,.affiliations,.links"
