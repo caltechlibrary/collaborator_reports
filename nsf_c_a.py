@@ -51,20 +51,29 @@ class Coauthor:
 #os.environ['AWS_SDK_LOAD_CONFIG']="1"
 
 #path = "s3://dataset.library.caltech.edu/CaltechAUTHORS"
-path="CaltechAUTHORS"
+path="CaltechAUTHORS.ds"
 #path="sample"
 
 #print("Updating data from CaltechAUTHORS")
 #Should drop in a s3 sync command
 # aws s3 sync s3://dataset.library.caltech.edu/CaltechAUTHORS CaltechAUTHORS
-subprocess.run(['dsindexer','-c',path,'-update','authors.json','authors.bleve'])
+#subprocess.run(['dataset','-c',path,'indexer','authors.json','authors.bleve'])
+
+err = dataset.indexer(path,path+'.bleve','authors.json')
+if err !="":
+    print(f"Unexpected error on index: {err}")
 
 #Get input
 name = input("Enter a CaltechAUTHORS author id (e.g. Readhead-A-C-S):")
 
-response =\
-        subprocess.check_output(['dsfind','-json','-size','10000','authors.bleve','authors:'+name],universal_newlines=True)
-response = json.loads(response)
+#response =\
+        #        subprocess.check_output(['dataset','-json','-size','10000','find','authors.bleve','authors:'+name],universal_newlines=True)
+#response = json.loads(response)
+results,err =dataset.find(path+".bleve","authors:"+name)
+if err !="":
+    print(f"Unexpected error on find: {err}")
+print(results)
+exit()
 keys = []
 for h in response['hits']:
     keys.append(h['id'])
@@ -204,7 +213,7 @@ for d in deduped:
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 
 #Google sheet ID for output
-output_sheet = "1_p054rcvNzPM3MfvCJJP_zWXVxACWwHqI82qTsd1CoQ"
+output_sheet = "19SW73gWSOIiDiYUNZQEFn4LK4s1GBim6FzHFJMz_UZs"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 export_list = ".ca_id,.names,.years,.affiliations,.links"

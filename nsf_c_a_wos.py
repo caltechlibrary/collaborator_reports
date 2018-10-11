@@ -58,13 +58,16 @@ headers = {
     }
 
 #Get input
-name = input("Enter a WOS author id (e.g. READHEAD ACS):")
+name = input("Enter a WOS author search term (e.g. Mooley K):")
+caltech = input("Restrict to Caltech-affiliated papers? Y or N:")
 
 base_url = 'https://api.clarivate.com/api/wos/?databaseId=WOK'
 url = base_url + '&count=100&firstRecord=1'
 
 query = urllib.parse.quote_plus('AU=('+name+')')
-url = url+'&usrQuery='+query+'&OG=Caltech'
+url = url+'&usrQuery='+query
+if caltech == 'Y':
+    url = url +'&OG=Caltech'
 
 response = requests.get(url,headers=headers)
 response = response.json()
@@ -131,8 +134,10 @@ for r in records:
     #We're going to do further processing
     if keep == True:
         authors = metadata['names']['name']
-        address_data =\
-        r['static_data']['fullrecord_metadata']['addresses']['address_name']
+        address_data = []
+        if r['static_data']['fullrecord_metadata']['addresses']['count'] > 0:
+            address_data =\
+                r['static_data']['fullrecord_metadata']['addresses']['address_name']
         addresses = {}
         #Set up address dictionary
         for a in address_data:
@@ -192,7 +197,7 @@ for d in deduped:
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 
 #Google sheet ID for output
-output_sheet = "19ze6U2jx8HaUZgYU4OBROAGXNvU7cEtfX_h1DDA3_I0"
+output_sheet = "1iTV6hEUVsT0aFZND7DgRlPSIkPOf8sGgk1W-v8qr-lc"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 export_list = ".ca_id,.names,.years,.affiliations,.links"
