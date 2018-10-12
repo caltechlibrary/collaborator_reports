@@ -10,22 +10,26 @@ class Coauthor:
     def __init__(self,ca_id,name,affiliation,year,link):
         self.ca_id = ca_id
         self.names = [name]
-        self.affiliations = [affiliation]
+        split = affiliation.split(';')
+        self.affiliations = []
+        for a in split:
+            self.affiliations.append(a.strip())
         self.years = [year]
         self.links = [link]
+        split = name.split(' ')
+        self.family = split[0].split(',')[0]
+        if len(split) > 1:
+            self.first_part = split[1]
+        else:
+            self.first_part = ''
     def write(self):
         alist = ''
-        print(self.affiliations)
         for a in self.affiliations:
-            if a != ' ':
-                if alist == '':
-                    alist = a
-                else:
-                    split = alist.split(';')
-                    if a not in split:
-                        alist = alist +'; '+a
+            if alist == '':
+                alist = a 
+            else:
+                alist = alist + ';' + a
         #Want the latest year
-        print('year')
         year = 0
         for y in self.years:
             if y > year:
@@ -58,7 +62,8 @@ class Coauthor:
 name = input("Enter a ADS author search term (e.g. Mooley, K):")
 
 records =\
-list(ads.SearchQuery(author=name,fl=['aff','author','pubdate','doi','orcid'],rows=5000,max_pages=100))
+list(ads.SearchQuery(author=name,fl=['aff','author','pubdate','doi',
+    'orcid_pub','orcid_user','orcid_other','bibcode'],rows=5000,max_pages=100))
 
 coauthors = []
 
@@ -86,14 +91,23 @@ for record in records:
     #We're going to do further processing
     if keep == True:
         for a in range(len(record.author)):
-            if record.orcid == None:
-                if record.doi == None:
-                    coauthors.append(Coauthor(record.author[a],record.author[a],record.aff[a],pubdate.year,''))
-                else:
-                    coauthors.append(Coauthor(record.author[a],record.author[a],record.aff[a],pubdate.year,record.doi[0]))
+            idv = '-'
+            if record.orcid_pub != None:
+                idv = record.orcid_pub[a]
+            if record.orcid_user != None:
+                if idv == '-':
+                    idv = record.orcid_user[a]
+            if record.orcid_other != None:
+                if idv == '-':
+                    idv = record.orcid_other[a]
+            if idv == '-':
+                idv = 'D'+str(len(coauthors))
+            if record.doi == None:
+                url = record.bibcode
             else:
-                coauthors.append(Coauthor(record.orcid[a],record.author[a],record.aff[a],pubdate.year,record.doi[0]))
-
+                url = record.doi[0]
+            coauthors.append(Coauthor(idv,record.author[a],record.aff[a],pubdate.year,url))
+            
         print(len(coauthors))
 
 #Dedupe
@@ -103,17 +117,33 @@ for cnt in range(len(coauthors)):
     dupe = False
     for d in deduped:
         if d.ca_id == subject.ca_id:
-            dupe = True
-            if subject.affiliations not in d.affiliations:
-                d.affiliations = d.affiliations + subject.affiliations
-            if subject.years not in d.years:
-                d.years = d.years + subject.years
-            if subject.names not in d.names:
-                d.names = d.names + subject.names
-            if subject.links not in d.links:
-                d.links = d.links + subject.links
+            dupe = d
+        if subject.names[0] in d.names and subject.affiliations[0] in d.affiliations:
+            dupe = d
+        if subject.names[0] in d.names and \
+            (subject.affiliations[0] == '-' or d.affiliations[0] == '-'):
+            dupe = d
+        if subject.family == d.family and subject.first_part == d.first_part\
+        and subject.affiliations[0] in d.affiliations:
+            dupe = d
+        if subject.family == d.family and subject.first_part == d.first_part\
+        and (subject.affiliations[0] == '-' or d.affiliations[0] == '-'):
+            dupe = d
+
     if dupe == False:
+        #This is a new author
         deduped.append(subject)
+    else:
+        #Save any unique metadata
+        if subject.affiliations not in dupe.affiliations:
+            if subject.affiliations != '-':
+                dupe.affiliations += subject.affiliations
+        if subject.years not in dupe.years:
+            dupe.years += subject.years
+        if subject.names not in dupe.names:
+            dupe.names += subject.names
+        if subject.links not in dupe.links:
+            dupe.links += subject.links
 
 print(len(deduped))
 subprocess.run(['rm','-rf','collaborators.ds'])
@@ -125,7 +155,7 @@ for d in deduped:
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 
 #Google sheet ID for output
-output_sheet = "1VSJwLHq5r_S98d0_V-PchlOEofrE0U2DHCSzGFAQhlA"
+output_sheet = "1rXamt4R7nGxPLS5awRMpbpWidGYBx4bQRVViSXdwlco"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 export_list = ".ca_id,.names,.years,.affiliations,.links"
