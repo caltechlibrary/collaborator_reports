@@ -1,4 +1,4 @@
-import os,subprocess,json,csv,collections
+import os,subprocess,json,csv,string
 from datetime import date,timedelta
 import requests
 import ads
@@ -88,6 +88,10 @@ for record in records:
         day = 1
     pubdate = date(year,month,day)
     keep = pubdate > cutoff
+    #Remove group listings by simple matching
+    remove_words =\
+    set(['collaboration','team','telescope','collaborations','network'])
+    remove_punctuation = str.maketrans('','',string.punctuation)
     #We're going to do further processing
     if keep == True:
         for a in range(len(record.author)):
@@ -106,7 +110,13 @@ for record in records:
                 url = record.bibcode
             else:
                 url = record.doi[0]
-            coauthors.append(Coauthor(idv,record.author[a],record.aff[a],pubdate.year,url))
+            author_words =\
+            set(record.author[a].translate(remove_punctuation).lower().split())
+            #If none of the words in remove_words appears, we have an author
+            if remove_words.intersection(author_words) == set():
+                #Remove strict author match; should be updated with author searching
+                if record.author[a] != name:
+                    coauthors.append(Coauthor(idv,record.author[a],record.aff[a],pubdate.year,url))
             
         print(len(coauthors))
 
