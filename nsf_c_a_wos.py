@@ -20,7 +20,7 @@ class Coauthor:
                 if alist == '':
                     alist = a
                 else:
-                    split = alist.split(';')
+                    split = [x.strip() for x in alist.split(';')]
                     if a not in split:
                         alist = alist +'; '+a
         #Want the latest year
@@ -64,15 +64,18 @@ caltech = input("Restrict to Caltech-affiliated papers? Y or N:")
 base_url = 'https://api.clarivate.com/api/wos/?databaseId=WOK'
 url = base_url + '&count=100&firstRecord=1'
 
-query = urllib.parse.quote_plus('AU=('+name+')')
-url = url+'&usrQuery='+query
 if caltech == 'Y':
-    url = url +'&OG=Caltech'
+    query = 'AU=('+name+') AND OG=(California Institute of Technology)'
+else:
+    query = 'AU=('+name+')'
+query = urllib.parse.quote_plus(query)
+url = url+'&usrQuery='+query
 
+print(url)
 response = requests.get(url,headers=headers)
 response = response.json()
 record_count = response['QueryResult']['RecordsFound']
-print(record_count)
+print(record_count," Records from WOS")
 query_id = response['QueryResult']['QueryID']
 records = response['Data']['Records']['records']['REC']
 #We have saved the first 100 records
@@ -141,8 +144,15 @@ for r in records:
         addresses = {}
         #Set up address dictionary
         for a in address_data:
-            data = a['address_spec']
-            addresses[data['addr_no']] = data['full_address']
+            if 'address_spec' in a:
+                if type(a) == dict:
+                    data = a['address_spec']
+                    addresses[data['addr_no']] = data['full_address']
+                else:
+                    print("Bad data")
+            else:
+                print("Bad Address")
+                print(a)
         link = ''
         for idv in\
         r['dynamic_data']['cluster_related']['identifiers']['identifier']:
@@ -156,7 +166,10 @@ for r in records:
                 affil = []
                 if 'addr_no' in a:
                     if type(a['addr_no']) == int:
-                        affil.append(addresses[a['addr_no']])
+                        if len(addresses) >= a['addr_no']:
+                            affil.append(addresses[a['addr_no']])
+                        else:
+                            print("Missing address")
                     else:
                         addr_list = a['addr_no'].split(' ')
                         for addr in addr_list:
@@ -178,6 +191,7 @@ for cnt in range(len(coauthors)):
             dupe = True
             if subject.affiliations not in d.affiliations:
                 d.affiliations = d.affiliations + subject.affiliations
+                print(d.affiliations)
             if subject.years not in d.years:
                 d.years = d.years + subject.years
             if subject.names not in d.names:
@@ -197,7 +211,7 @@ for d in deduped:
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 
 #Google sheet ID for output
-output_sheet = "1iTV6hEUVsT0aFZND7DgRlPSIkPOf8sGgk1W-v8qr-lc"
+output_sheet = "1vHLYiE3XB8hfFkyYp_1LnbI1dKS32Pa90h43zbYpHY8" #"1mgWYohA9tXY0RKbn06AWgWysimB5N9d2AeefDA4l4Pw"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 export_list = ".ca_id,.names,.years,.affiliations,.links"
