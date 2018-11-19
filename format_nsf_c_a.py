@@ -4,6 +4,7 @@ import requests
 import sys
 import dataset
 import urllib
+import argparse
 from clint.textui import progress
 
 class Coauthor:
@@ -62,9 +63,21 @@ class Coauthor:
 #Enter the collection (e.g. Adhikari.ds):
 #Enter the input google sheet ID:
 #Enter the output google sheet ID
-name = sys.argv[1]
-sheet = sys.argv[2]
-output_sheet = sys.argv[3]
+
+parser = argparse.ArgumentParser(description=\
+        "Generate a formatted Collaborator Report for the NSF Part C Section A")
+parser.add_argument('data_collection', nargs=1, help=\
+            'file name for the dataset collection with harvested data')
+parser.add_argument('input_sheet', nargs=1, help=\
+        'Input Google Sheet ID with author citations')
+parser.add_argument('output_sheet', nargs=1, help='Output Google Sheet ID')
+parser.add_argument('-limited', action='store_true', help=\
+        'Save only the first three authors')
+args = parser.parse_args()
+
+name = args.data_collection[0]
+sheet = args.input_sheet[0]
+output_sheet = args.output_sheet[0]
 
 os.system("rm -rf imported.ds")
 os.system("dataset init imported.ds")
@@ -99,6 +112,10 @@ for key in keys:
         #If none of the words in remove_words appears, we have an author
         if remove_words.intersection(author_words) == set():
             coauthors.append(Coauthor(identifiers[count],a,affiliations[count],year,link))
+        if args.limited == True:
+            if count>=2:
+                print("Dropping authors due to limited option")
+                break
         count = count + 1 
 
 print("Total authors:", len(coauthors))
