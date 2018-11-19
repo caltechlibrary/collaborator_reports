@@ -126,26 +126,37 @@ for r in records:
                 print(a)
         # set up author list
         author_list = ''
-        affiliation_list = ''
-        identifier_list = ''
+        affiliation_list = []
+        identifier_list = []
         for a in authors:
-            author_list+=';'+a['full_name']
-            affil = ''
+            if author_list == '':
+                author_list = a['full_name']
+            else:
+                author_list+=';'+a['full_name']
+            affil = []
             if 'addr_no' in a:
                 if type(a['addr_no']) == int:
                     if len(addresses) >= a['addr_no']:
-                        affil+=';'+addresses[a['addr_no']]
+                        address = addresses[a['addr_no']]
+                        if address == []:
+                            affil.append(' ')
+                        else:
+                            affil.append(address)
                     else:
-                        print("Missing address")
+                        affil.append(' ')
                 else:
+                    #There are multiple address numbers
                     addr_list = a['addr_no'].split(' ')
                     for addr in addr_list:
-                        affil+=';'+addresses[int(addr)]
-            affiliation_list+=';'+affil
+                        affil.append(addresses[int(addr)])
+            if affil == []:
+                #There is no address reference for the author
+                affil = [' ']
+            affiliation_list.append(affil)
             if 'wos_standard' in a:
-                identifier_list+=';'+a['wos_standard']
+                identifier_list.append(a['wos_standard'])
             else:
-                identifier_list+=';'+a['full_name']
+                identifier_list.append(a['full_name'])
         link = ''
         for idv in\
         r['dynamic_data']['cluster_related']['identifiers']['identifier']:
@@ -159,6 +170,8 @@ for r in records:
  
         subprocess.run(['dataset','-i','-','-c',collection,'create',link],\
                             input=json.dumps(record),universal_newlines=True)
+
+exit()
 
 #Export to Google Sheet
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"

@@ -110,7 +110,6 @@ for cnt in range(len(coauthors)):
     subject = coauthors.pop()
     dupe = False
     for d in deduped:
-        print(subject.affiliations, d.affiliations,subject.links,d.links)
         if d.ca_id == subject.ca_id:
             dupe = d
         if subject.names[0] in d.names and subject.affiliations[0] in d.affiliations:
@@ -141,6 +140,7 @@ for cnt in range(len(coauthors)):
             dupe.links += subject.links
 
 print(len(deduped))
+
 subprocess.run(['rm','-rf','collaborators.ds'])
 subprocess.run(['dataset','init','collaborators.ds'])
 for d in deduped:
