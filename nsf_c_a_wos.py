@@ -211,7 +211,7 @@ for d in deduped:
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 
 #Google sheet ID for output
-output_sheet = "1vHLYiE3XB8hfFkyYp_1LnbI1dKS32Pa90h43zbYpHY8" #"1mgWYohA9tXY0RKbn06AWgWysimB5N9d2AeefDA4l4Pw"
+output_sheet = "1FzADOYPWfRpcjS-1ZC5xBjUd9_-myKC3dD8fmSDjbFA"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 export_list = ".ca_id,.names,.years,.affiliations,.links"
