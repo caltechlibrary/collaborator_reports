@@ -59,6 +59,60 @@ class Coauthor:
                 'links':llist}
         return json
 
+def remove_punctuation(input_string):
+    punctuation = str.maketrans('','',string.punctuation)
+    return input_string.translate(punctuation)
+
+def contains_exclusion_word(input_string):
+    #Remove group listings by simple matching
+    remove_words =\
+            set(['collaboration','team','telescope','collaborations','network'])
+    author_words =set(remove_punctuation(a).lower().split())
+    #If none of the words in remove_words appears, we have an author
+    if remove_words.intersection(author_words) == set():
+        return False
+    else:
+        return True
+
+def same_affiliation(first,second):
+    first_set = set(remove_punctuation(first).lower().split())
+    second_set = set(remove_punctuation(second).lower().split())
+    overlap = len(first_set.intersection(second_set))
+    print(overlap)
+    if overlap > 4:
+        return True
+    else:
+        return False
+
+def match_affiliations(first,second):
+    match = False
+    for f in first:
+        for s in second:
+            if same_affiliation(f,s):
+                match = True
+            #Always match to blanks
+            if f == ' '  or s == ' ':
+                mach = True
+    return match
+
+def combine_affiliations(first,second):
+    comb_affil = second.copy()
+    for f in first:
+        saved = False
+        for s in second:
+            if same_affiliation(f,s):
+                saved = True
+                #We use size to judge which to keep
+                if len(f) > len(s):
+                    comb_affil.remove(s)
+                    comb_affil.append(f)
+        if saved == False:
+            comb_affil.append(f)
+    if len(comb_affil) > 1:
+        if ' ' in comb_affil:
+            comb_affil.remove(' ')
+    return comb_affil
+
 #Get input
 #Enter the collection (e.g. Adhikari.ds):
 #Enter the input google sheet ID:
@@ -87,12 +141,6 @@ os.system("dataset import-gsheet "+sheet+" 'Sheet1' 'A:CZ' 1 -c imported.ds ")
 
 keys = subprocess.check_output(["dataset","keys","imported.ds"],universal_newlines=True).splitlines()
 
-
-#Remove group listings by simple matching
-remove_words =\
-    set(['collaboration','team','telescope','collaborations','network'])
-remove_punctuation = str.maketrans('','',string.punctuation)
-
 coauthors = []
 
 count = 0
@@ -108,9 +156,8 @@ for key in keys:
     link = record['link']
     year = record['year']
     for a in authors:
-        author_words =set(a.translate(remove_punctuation).lower().split())
         #If none of the words in remove_words appears, we have an author
-        if remove_words.intersection(author_words) == set():
+        if contains_exclusion_word(a) == False:
             coauthors.append(Coauthor(identifiers[count],a,affiliations[count],year,link))
         if args.limited == True:
             if count>=2:
@@ -129,16 +176,10 @@ for cnt in range(len(coauthors)):
     for d in deduped:
         if d.ca_id == subject.ca_id:
             dupe = d
-        if subject.names[0] in d.names and subject.affiliations[0] in d.affiliations:
-            dupe = d
-        if subject.names[0] in d.names and \
-            (subject.affiliations[0] == ' ' or d.affiliations[0] == ' '):
+        if subject.names[0] in d.names and match_affiliations(subject.affiliations,d.affiliations):
             dupe = d
         if subject.family == d.family and subject.first_part == d.first_part\
-        and subject.affiliations[0] in d.affiliations:
-            dupe = d
-        if subject.family == d.family and subject.first_part == d.first_part\
-        and (subject.affiliations[0] == ' ' or d.affiliations[0] == ' '):
+        and match_affiliations(subject.affiliations,d.affiliations):
             dupe = d
 
     if dupe == False:
@@ -146,9 +187,7 @@ for cnt in range(len(coauthors)):
         deduped.append(subject)
     else:
         #Save any unique metadata
-        if subject.affiliations not in dupe.affiliations:
-            if subject.affiliations != '-':
-                dupe.affiliations += subject.affiliations
+        dupe.affiliations = combine_affiliations(subject.affiliations,dupe.affiliations)
         if subject.years not in dupe.years:
             dupe.years += subject.years
         if subject.names not in dupe.names:
