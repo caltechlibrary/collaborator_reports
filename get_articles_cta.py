@@ -5,49 +5,6 @@ import ads
 import dataset
 from clint.textui import progress
 
-class Coauthor:
-    def __init__(self,ca_id,name,affiliation,year,link):
-        self.ca_id = ca_id
-        self.names = [name]
-        self.affiliations = [affiliation]
-        self.years = [year]
-        self.links = [link]
-    def write(self):
-        alist = ''
-        for a in self.affiliations:
-            if a != ' ':
-                if alist == '':
-                    alist = a
-                else:
-                    split = alist.split(';')
-                    if a not in split:
-                        alist = alist +'; '+a
-        #Want the latest year
-        year = 0
-        for y in self.years:
-            if y > year:
-                year = y
-        nlist = ''
-        for n in self.names:
-            if nlist == '':
-                nlist = n
-            else:
-                split = nlist.split(';')
-                if n not in split:
-                    nlist = nlist +'; '+n
-        llist = ''
-        for l in self.links:
-            if llist == '':
-                llist = l
-            else:
-                llist = llist +'; '+str(l)
-        json = {'ca_id':self.ca_id,\
-                'names':nlist,\
-                'affiliations':alist,\
-                'years':year,\
-                'links':llist}
-        return json
-
 #os.environ['AWS_SDK_LOAD_CONFIG']="1"
 
 #path = "s3://dataset.library.caltech.edu/CaltechAUTHORS"
