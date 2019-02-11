@@ -17,13 +17,12 @@ headers = {
 #Get input
 name = input("Enter a WOS author search term (e.g. Mooley K):")
 caltech = input("Restrict to Caltech-affiliated papers? Y or N:")
-sheet = input("Enter the google sheet ID")
+sheet = input("Enter the google sheet ID:")
 
 #Set up collection
 collection = name.split()[0]+'.ds'
 subprocess.run(['rm','-rf',collection])
-subprocess.run(['dataset','init',collection])
-
+dataset.init(collection)
 base_url = 'https://api.clarivate.com/api/wos/?databaseId=WOK'
 url = base_url + '&count=100&firstRecord=1'
 
@@ -114,16 +113,22 @@ for r in records:
                 r['static_data']['fullrecord_metadata']['addresses']['address_name']
         addresses = {}
         #Set up address dictionary
-        for a in address_data:
-            if 'address_spec' in a:
-                if type(a) == dict:
-                    data = a['address_spec']
-                    addresses[data['addr_no']] = data['full_address']
+        if type(address_data) == list:
+            for a in address_data:
+                if 'address_spec' in a:
+                    if type(a) == dict:
+                        data = a['address_spec']
+                        addresses[data['addr_no']] = data['full_address']
+                    else:
+                        print(r)
+                        print("Bad data")
                 else:
-                    print("Bad data")
-            else:
-                print("Bad Address")
-                print(a)
+                    print(r)
+                    print("Bad Address")
+        else:
+            #Just one address
+            data = address_data['address_spec']
+            addresses[data['addr_no']] = data['full_address']
         # set up author list
         author_list = ''
         affiliation_list = []
@@ -158,20 +163,30 @@ for r in records:
             else:
                 identifier_list.append(a['full_name'])
         link = ''
-        for idv in\
-        r['dynamic_data']['cluster_related']['identifiers']['identifier']:
-            if idv['type'] == 'xref_doi':
+        identifiers = r['dynamic_data']['cluster_related']['identifiers']['identifier']
+        if type(identifiers) == list:
+            for idv in identifiers:
+                if idv['type'] == 'xref_doi':
+                    link = 'https://doi.org/'+idv['value']
+                elif idv['type'] == 'doi':
+                    link = 'https://doi.org/'+idv['value']
+                else:
+                    #We're just going to use the the first other identifier as filler
+                    if link == '':
+                        link = idv['value']
+        else:
+            #Just one identifier
+            if identifiers['type'] == 'xref_doi':
                 link = 'https://doi.org/'+idv['value']
-            if idv['type'] == 'doi':
+            elif identifiers['type'] == 'doi':
                 link = 'https://doi.org/'+idv['value']
+            else:
+                link = idv['value']    
 
         record =\
                 {'id':uid,'title':title,'journal':journal,'authors':author_list,'identifiers':identifier_list,'affiliations':affiliation_list,'link':link,'year':publication_date.year} 
- 
-        subprocess.run(['dataset','-i','-','-c',collection,'create',link],\
-                            input=json.dumps(record),universal_newlines=True)
 
-exit()
+        dataset.create(collection,link,record)
 
 #Export to Google Sheet
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
@@ -179,8 +194,19 @@ os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 #Google sheet ID for output
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
-export_list = ".link,.authors,.title,.journal,.year"
-title_list = "link,authors,title,journal,year"
-subprocess.run(['dataset','-c',collection,'export-gsheet',\
-                    sheet,sheet_name,sheet_range,'true',export_list,title_list])
+f_name = 'f_name'
+export_list = [".link",".authors",".title",".journal",".year"]
+title_list = ["link","authors","title","journal","year"]
+keys = dataset.keys(collection)
+if dataset.has_frame(collection, f_name):
+    dataset.delete_frame(source, f_name)
+frame, err = dataset.frame(collection,f_name,keys,export_list)
+if err != '':
+    print(err)
+err = dataset.frame_labels(collection,f_name,title_list)
+if err != '':
+    print(err)
+err = dataset.export_gsheet(collection,f_name,sheet,sheet_name,sheet_range)
+if err != '':
+    print(err)
 
