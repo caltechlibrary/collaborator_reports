@@ -195,11 +195,11 @@ os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 f_name = 'f_name'
-export_list = [".link",".authors",".title",".journal",".year"]
-title_list = ["link","authors","title","journal","year"]
+export_list = [".title",".journal",".year"]
+title_list = ["title","journal","year"]
 keys = dataset.keys(collection)
 if dataset.has_frame(collection, f_name):
-    dataset.delete_frame(source, f_name)
+    dataset.delete_frame(collection, f_name)
 frame, err = dataset.frame(collection,f_name,keys,export_list)
 if err != '':
     print(err)
