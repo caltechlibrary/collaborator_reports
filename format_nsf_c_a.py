@@ -5,7 +5,7 @@ import sys
 import dataset
 import urllib
 import argparse
-from clint.textui import progress
+from progressbar import progressbar
 
 class Coauthor:
     def __init__(self,ca_id,name,affiliation,year,link):
@@ -78,7 +78,6 @@ def same_affiliation(first,second):
     first_set = set(remove_punctuation(first).lower().split())
     second_set = set(remove_punctuation(second).lower().split())
     overlap = len(first_set.intersection(second_set))
-    print(overlap)
     if overlap > 4:
         return True
     else:
@@ -96,10 +95,11 @@ def match_affiliations(first,second):
     return match
 
 def combine_affiliations(first,second):
+    #We make start with a random guess that the second list is correct
     comb_affil = second.copy()
     for f in first:
         saved = False
-        for s in second:
+        for s in comb_affil:
             if same_affiliation(f,s):
                 saved = True
                 #We use size to judge which to keep
@@ -133,22 +133,24 @@ name = args.data_collection[0]
 sheet = args.input_sheet[0]
 output_sheet = args.output_sheet[0]
 
+import_coll = "imported.ds"
 os.system("rm -rf imported.ds")
-os.system("dataset init imported.ds")
+dataset.init(import_coll)
 
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
-os.system("dataset import-gsheet "+sheet+" 'Sheet1' 'A:CZ' 1 -c imported.ds ")
+err = dataset.import_gsheet(import_coll,sheet,'Sheet1',1,'A:CZ')
+if err != '':
+    print(err)
 
-keys = subprocess.check_output(["dataset","keys","imported.ds"],universal_newlines=True).splitlines()
+keys = dataset.keys(import_coll)
 
 coauthors = []
 
 count = 0
-for key in keys:
-    entry = json.loads(\
-            subprocess.check_output(["dataset","-c","imported.ds","read",key],universal_newlines=True))
-    record = json.loads(\
-            subprocess.check_output(["dataset","-c",name,"read",entry['link']],universal_newlines=True))
+for key in progressbar(keys, redirect_stdout=True):
+    record,err = dataset.read(name,key)
+    if err != "":
+        print(err)
     count = 0
     identifiers = record['identifiers']
     affiliations = record['affiliations']
@@ -165,12 +167,11 @@ for key in keys:
                 break
         count = count + 1 
 
-print("Total authors:", len(coauthors))
+print("Total authors: ", len(coauthors))
 
 #Dedupe
 deduped = []
-for cnt in range(len(coauthors)):
-    print(cnt)
+for cnt in progressbar(range(len(coauthors)), redirect_stdout=True):
     subject = coauthors.pop()
     dupe = False
     for d in deduped:
@@ -195,21 +196,32 @@ for cnt in range(len(coauthors)):
         if subject.links not in dupe.links:
             dupe.links += subject.links
 
-print(len(deduped))
+print("Total collaborators: ",len(deduped))
 
-subprocess.run(['rm','-rf','collaborators.ds'])
-subprocess.run(['dataset','init','collaborators.ds'])
+collab = 'collaborators.ds'
+
+subprocess.run(['rm','-rf',collab])
+dataset.init(collab)
 for d in deduped:
-    subprocess.run(['dataset','-i','-','-c','collaborators.ds','create',d.ca_id],\
-                            input=json.dumps(d.write()),universal_newlines=True)
+    dataset.create(collab,d.ca_id,d.write())
 #Export to Google Sheet
 os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 
 #Google sheet ID for output
+f_name = 'frm'
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
-export_list = ".ca_id,.names,.years,.affiliations,.links"
-title_list = "id,name,years,affiliations"
-subprocess.run(['dataset','-c','collaborators.ds','export-gsheet',\
-                    output_sheet,sheet_name,sheet_range,'true',export_list,title_list])
-
+export_list = [".names",".years",".affiliations",".links"]
+title_list = ["name","years","affiliations"]
+keys = dataset.keys(collab)
+if dataset.has_frame(collab, f_name):
+    dataset.delete_frame(collab, f_name)
+frame, err = dataset.frame(collab,f_name,keys,export_list)
+if err != '':
+    print(err)
+err = dataset.frame_labels(collab,f_name,title_list)
+if err != '':
+    print(err)
+err = dataset.export_gsheet(collab,f_name,output_sheet,sheet_name,sheet_range)
+if err != '':
+    print(err)
