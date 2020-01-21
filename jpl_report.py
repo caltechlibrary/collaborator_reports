@@ -42,6 +42,11 @@ if __name__ == "__main__":
     print("Processing Records")
     for metadata in all_metadata:
         if "addresses" in metadata:
+            # print(metadata['uid'])
+            caltech = False
+            caltech_names = []
+            JPL = False
+            jpl_names = []
             for a in metadata["addresses"]:
                 if type(a) is not str:
                     if "organizations" in a["address_spec"]:
@@ -49,6 +54,8 @@ if __name__ == "__main__":
                             type(a["address_spec"]["organizations"]["organization"])
                             == list
                         ):
+                            ct_internal = False
+                            jpl_internal = False
                             for org in a["address_spec"]["organizations"][
                                 "organization"
                             ]:
@@ -57,23 +64,47 @@ if __name__ == "__main__":
                                         org["content"]
                                         == "NASA Jet Propulsion Laboratory (JPL)"
                                     ):
-                                        print("JPL")
+                                        jpl_internal = True
+                                        # print("JPL")
                                     if (
                                         org["content"]
                                         == "California Institute of Technology"
                                     ):
-                                        print("Caltech")
+                                        ct_internal = True
+                                        # print("Caltech")
                                 else:
                                     if org == "Jet Prop Lab":
-                                        print("JPL")
+                                        # print("JPL")
+                                        jpl_internal = True
                                     elif org == "CALTECH":
-                                        print("Caltech")
-                                    # else:
-                                    # print('Non-normalized org', org)
-                        # else:
-                        # print('Single org ', a['address_spec']['organizations']['organization'])
-                    # else:
-                    # print("Non-standard address format: ",a,metadata['uid'])
+                                        # print("Caltech")
+                                        ct_internal = True
+                            if jpl_internal:
+                                JPL = True
+                                for name in a["names"]["name"]:
+                                    print(a["names"])
+                                    if "display_name" in name:
+                                        jpl_names.append(name["display_name"])
+                                    else:
+                                        jpl_names.append(name)
+                            if ct_internal and not jpl_internal:
+                                caltech = True
+                                for name in a["names"]["name"]:
+                                    print(a["names"])
+                                    if "display_name" in name:
+                                        caltech_names.append(name["display_name"])
+                                    else:
+                                        caltech_names.append(name)
+            if caltech and JPL:
+                print(jpl_names)
+                print(caltech_names)
+                # print('Caltech ',caltech,' JPL ',JPL)
+                # else:
+                # print('Non-normalized org', org)
+                # else:
+                # print('Single org ', a['address_spec']['organizations']['organization'])
+                # else:
+                # print("Non-standard address format: ",a,metadata['uid'])
                 # else:
                 # print("Odd address format: ",a,metadata['uid'])
         # else:
