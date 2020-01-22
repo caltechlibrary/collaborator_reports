@@ -61,16 +61,12 @@ if __name__ == "__main__":
                 jpl_names = []
                 for a in metadata["addresses"]:
                     if type(a) is not str:
-                        if "organizations" in a["address_spec"]:
-                            if (
-                                type(a["address_spec"]["organizations"]["organization"])
-                                == list
-                            ):
+                        spec = a["address_spec"]
+                        if "organizations" in spec:
+                            if type(spec["organizations"]["organization"]) == list:
                                 ct_internal = False
                                 jpl_internal = False
-                                for org in a["address_spec"]["organizations"][
-                                    "organization"
-                                ]:
+                                for org in spec["organizations"]["organization"]:
                                     if "content" in org:
                                         if (
                                             org["content"]
@@ -81,12 +77,23 @@ if __name__ == "__main__":
                                             org["content"]
                                             == "California Institute of Technology"
                                         ):
-                                            ct_internal = True
+                                            if "zip" in spec:
+                                                if (
+                                                    a["address_spec"]["zip"]["content"]
+                                                    != 91109
+                                                ):
+                                                    ct_internal = True
+                                            else:
+                                                ct_internal = True
                                     else:
                                         if org == "Jet Prop Lab":
                                             jpl_internal = True
                                         elif org == "CALTECH":
-                                            ct_internal = True
+                                            if "zip" in spec:
+                                                if spec["zip"]["content"] != 91109:
+                                                    ct_internal = True
+                                            else:
+                                                ct_internal = True
                                 if jpl_internal:
                                     JPL = True
                                     if "names" in a:
