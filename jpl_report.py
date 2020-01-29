@@ -34,6 +34,8 @@ if __name__ == "__main__":
                 "jpl authors",
                 "caltech authors",
                 "publication date",
+                "jpl_order",
+                "caltech_order"
             ]
         )
 
@@ -57,8 +59,10 @@ if __name__ == "__main__":
             if "addresses" in metadata:
                 caltech = False
                 caltech_names = []
+                caltech_order = []
                 JPL = False
                 jpl_names = []
+                jpl_order = []
                 for a in metadata["addresses"]:
                     if type(a) is not str:
                         spec = a["address_spec"]
@@ -103,10 +107,13 @@ if __name__ == "__main__":
                                                     jpl_names.append(
                                                         name["display_name"]
                                                     )
+                                                    jpl_order.append(name["seq_no"])
                                         else:
+                                            name = a["names"]["name"]
                                             jpl_names.append(
-                                                a["names"]["name"]["display_name"]
+                                                name["display_name"]
                                             )
+                                            jpl_order.append(name["seq_no"])
                                 if ct_internal and not jpl_internal:
                                     caltech = True
                                     if "names" in a:
@@ -116,10 +123,13 @@ if __name__ == "__main__":
                                                     caltech_names.append(
                                                         name["display_name"]
                                                     )
+                                                    caltech_order.append(name["seq_no"])
                                         else:
+                                            name = a["names"]["name"]
                                             caltech_names.append(
-                                                a["names"]["name"]["display_name"]
+                                                name["display_name"]
                                             )
+                                            caltech_order.append(name["seq_no"])
                 if caltech and JPL:
                     title = ""
                     journal = ""
@@ -136,5 +146,7 @@ if __name__ == "__main__":
                             jpl_names,
                             caltech_names,
                             metadata["sortdate"],
+                            jpl_order,
+                            caltech_order
                         ]
                     )
