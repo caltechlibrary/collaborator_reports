@@ -2,9 +2,8 @@ import os,subprocess,json,csv,collections
 from datetime import date,timedelta
 import requests
 import ads
-import dataset
+from py_dataset import dataset
 import urllib
-from clint.textui import progress
 
 #Get access token from WOS sed as environment variable with source token.bash
 token = os.environ['WOSTOK']
@@ -133,6 +132,8 @@ for r in records:
         author_list = ''
         affiliation_list = []
         identifier_list = []
+        if type(authors) != list:
+            authors = [authors]
         for a in authors:
             if author_list == '':
                 author_list = a['full_name']
@@ -195,15 +196,12 @@ os.environ['GOOGLE_CLIENT_SECRET_JSON']="/etc/client_secret.json"
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 f_name = 'f_name'
-export_list = [".title",".journal",".year"]
-title_list = ["title","journal","year"]
+export_list = [".link",".title",".journal",".year"]
+title_list = ["link","title","journal","year"]
 keys = dataset.keys(collection)
 if dataset.has_frame(collection, f_name):
     dataset.delete_frame(collection, f_name)
-frame, err = dataset.frame(collection,f_name,keys,export_list)
-if err != '':
-    print(err)
-err = dataset.frame_labels(collection,f_name,title_list)
+frame, err = dataset.frame(collection,f_name,keys,export_list,title_list)
 if err != '':
     print(err)
 err = dataset.export_gsheet(collection,f_name,sheet,sheet_name,sheet_range)

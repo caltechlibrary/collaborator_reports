@@ -7,16 +7,17 @@ from py_dataset import dataset
 def write_records(records, collection):
     for r in records:
         key = r["UID"]
-        print(key)
-        err = dataset.create(collection, key, r)
-        if err != "":
-            print(f"Unexpected error on create: {err}")
+        if dataset.has_key(collection, key) == False:
+            print(key)
+            err = dataset.create(collection, key, r)
+            if err != "":
+                print(f"Unexpected error on create: {err}")
 
 
 def get_wos_refs(new=True):
     # New=True will download everything from scratch and delete any existing records
 
-    collection = "wos_refs.ds"
+    collection = "all_wos.ds"
 
     if new == True:
         if os.path.exists(collection) == True:
@@ -58,7 +59,7 @@ def get_wos_refs(new=True):
         if err != "":
             print(f"Unexpected error on create: {err}")
 
-    query = "OG=(California Institute of Technology) AND PY=(2015-2019)"
+    query = "OG=(California Institute of Technology)"
     query = urllib.parse.quote_plus(query)
     url = base_url + "&usrQuery=" + query + "&count=100&firstRecord=1"
 
@@ -67,7 +68,10 @@ def get_wos_refs(new=True):
     record_count = response["QueryResult"]["RecordsFound"]
     print(record_count, " Records from WOS")
     query_id = response["QueryResult"]["QueryID"]
-    records = response["Data"]["Records"]["records"]["REC"]
+    try:
+        records = response["Data"]["Records"]["records"]["REC"]
+    except:
+        print(response)
     write_records(records, collection)
     # We have saved the first 100 records
     record_start = 101
@@ -87,7 +91,10 @@ def get_wos_refs(new=True):
             )
             response = requests.get(url, headers=headers)
             response = response.json()
-            records = response["Records"]["records"]["REC"]
+            try:
+                records = response["Records"]["records"]["REC"]
+            except:
+                print(response)
             write_records(records, collection)
             record_start = record_start + 100
             record_count = record_count - 100

@@ -2,7 +2,7 @@ import os,subprocess,json,csv,string
 from datetime import date,timedelta
 import requests
 import sys
-import dataset
+from py_dataset import dataset
 import urllib
 import argparse
 from progressbar import progressbar
@@ -152,7 +152,12 @@ for key in progressbar(keys, redirect_stdout=True):
     if err != "":
         print(err)
     count = 0
-    identifiers = record['identifiers']
+    if 'identifiers' in record:
+        identifiers = record['identifiers']
+    else:
+        identifiers = []
+    print(key)
+    print(record)
     affiliations = record['affiliations']
     authors = record['authors'].split(';')
     link = record['link']
@@ -212,14 +217,11 @@ f_name = 'frm'
 sheet_name = "Sheet1"
 sheet_range = "A1:CZ"
 export_list = [".names",".years",".affiliations",".links"]
-title_list = ["name","years","affiliations"]
+title_list = ["name","years","affiliations","links"]
 keys = dataset.keys(collab)
 if dataset.has_frame(collab, f_name):
     dataset.delete_frame(collab, f_name)
-frame, err = dataset.frame(collab,f_name,keys,export_list)
-if err != '':
-    print(err)
-err = dataset.frame_labels(collab,f_name,title_list)
+frame, err = dataset.frame(collab,f_name,keys,export_list,title_list)
 if err != '':
     print(err)
 err = dataset.export_gsheet(collab,f_name,output_sheet,sheet_name,sheet_range)
