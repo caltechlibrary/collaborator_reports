@@ -24,6 +24,10 @@ if __name__ == "__main__":
 
     report = "jpl_report.csv"
 
+    collaborative = 0
+    caltech_only = 0
+    jpl_only = 0
+
     with open(report, "w", newline="\n", encoding="utf-8") as fout:
         file_out = csv.writer(fout)
         file_out.writerow(
@@ -131,6 +135,7 @@ if __name__ == "__main__":
                                             )
                                             caltech_order.append(name["seq_no"])
                 if caltech and JPL:
+                    collaborative = collaborative + 1
                     title = ""
                     journal = ""
                     for t in metadata["titles"]:
@@ -150,3 +155,10 @@ if __name__ == "__main__":
                             caltech_order
                         ]
                     )
+                if JPL and not caltech:
+                    jpl_only = jpl_only + 1
+                if caltech and not JPL:
+                    caltech_only = caltech_only + 1
+
+    print(f'Caltech:{caltech_only} JPL:{jpl_only} Collaborative:{collaborative}')
+
