@@ -24,20 +24,22 @@ current_date = datetime.now()
 start_date = current_date - relativedelta(months=48)
 start_date = start_date.strftime("%Y-%m-%d")
 
+print(f"Searching for records after {start_date} for author {author_identifier}")
+
 records = get_author_records(
-    author_identifier=author_identifier,
-    date=start_date,
-    all_metadata=True
+    author_identifier=author_identifier, date=start_date, all_metadata=True
 )
 
-def update_coauthor(coauthor,new_author_info,year):
+
+def update_coauthor(coauthor, new_author_info, year):
     # update year
-    if coauthor['year'] < year:
-        coauthor['year'] = year
+    if coauthor["year"] < year:
+        coauthor["year"] = year
     # add affiliation
-    if 'affiiations' in new_author_info:
-        if new_author_info['affiliations'] not in coauthor['affiliations']:
-            coauthor['affiliations'].append(new_author_info['affiliations'])
+    if "affiiations" in new_author_info:
+        if new_author_info["affiliations"] not in coauthor["affiliations"]:
+            coauthor["affiliations"].append(new_author_info["affiliations"])
+
 
 def create_coauthor(author, year):
     if "affiliations" in author:
@@ -50,73 +52,70 @@ def create_coauthor(author, year):
         "year": year,
     }
 
+
 coauthors = {}
 
 
 for article in records:
     year = article["metadata"]["publication_date"].split("-")[0]
-    authors = article['metadata']['creators']
+    authors = article["metadata"]["creators"]
     for author in authors:
         name = author["person_or_org"]["name"]
-        print(name)
         if "identifiers" in author["person_or_org"]:
             identifiers = author["person_or_org"]["identifiers"]
             clpid = None
             orcid = None
             for identifier in identifiers:
-                if identifier["scheme"] == 'clpid':
+                if identifier["scheme"] == "clpid":
                     clpid = identifier["identifier"]
-                if identifier["scheme"] == 'orcid':
+                if identifier["scheme"] == "orcid":
                     orcid = identifier["identifier"]
-            print(clpid,orcid)
             if clpid:
-                print('CLPID')
                 if clpid in coauthors:
-                    print('update')
                     coauthor = coauthors[clpid]
-                    update_coauthor(coauthor,author,year)
+                    update_coauthor(coauthor, author, year)
                 elif orcid:
                     if orcid in coauthors:
-                        #If the orcid record got created first, use that
-                            print('update')
-                            coauthor = coauthors[orcid]
-                            update_coauthor(coauthor,author,year)
+                        # If the orcid record got created first, use that
+                        coauthor = coauthors[orcid]
+                        update_coauthor(coauthor, author, year)
                     else:
-                        print('new-clpid')
                         coauthors[clpid] = create_coauthor(author, year)
                 else:
-                    print('new-clpid')
                     coauthors[clpid] = create_coauthor(author, year)
             elif orcid:
-                print('ORCID')
                 if orcid in coauthors:
-                    print('update')
                     coauthor = coauthors[author_identifier]
-                    update_coauthor(coauthor,author,year)
+                    update_coauthor(coauthor, author, year)
                 else:
-                    print('new-orcid')
                     coauthors[orcid] = create_coauthor(author, year)
         else:
             if name in coauthors:
-                print('update')
                 coauthor = coauthors[name]
-                update_coauthor(coauthor,author,year)
+                update_coauthor(coauthor, author, year)
             else:
-                print('new-name')
                 coauthors[name] = create_coauthor(author, year)
 
 # Headers for the NSF collaborator report
-header = ["4", "Name:", "Organizational Affiliation", "Optional (email, Department", "Last Active"]
+header = [
+    "4",
+    "Name:",
+    "Organizational Affiliation",
+    "Optional (email, Department",
+    "Last Active",
+]
 data = []
 # Add coauthors to the data list
 for coauthor in coauthors:
-    a_string = ''
+    a_string = ""
     for affiliation in coauthors[coauthor]["affiliations"]:
-        if a_string == '':
-            a_string = affiliation['name']
+        if a_string == "":
+            a_string = affiliation["name"]
         else:
             a_string += f", {affiliation['name']} "
-    data.append(["A:", coauthors[coauthor]["name"], a_string, "", coauthors[coauthor]["year"]])
+    data.append(
+        ["A:", coauthors[coauthor]["name"], a_string, "", coauthors[coauthor]["year"]]
+    )
 
 sorted_rows = sorted(data, key=lambda x: x[1])
 
