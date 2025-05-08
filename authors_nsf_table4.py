@@ -101,6 +101,9 @@ for article in records:
             else:
                 coauthors[name] = create_coauthor(author, year, link)
 
+# The author shouldn't be a coauthor
+coauthors.pop(author_identifier)
+
 # Headers for the NSF collaborator report
 header = [
     "4",
