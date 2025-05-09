@@ -112,6 +112,10 @@ header = [
     "Optional (email, Department",
     "Last Active",
 ]
+
+if record_ids:
+    header.append("CaltechAUTHORS Record IDs (do not include in NSF report)")
+
 data = []
 # Add coauthors to the data list
 for coauthor in coauthors:
