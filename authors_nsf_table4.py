@@ -13,11 +13,11 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "author_identifier", type=str, help="The old identifier to be replaced"
 )
-parser.add_argument("--links", action=argparse.BooleanOptionalAction)
+parser.add_argument("--record_ids", action=argparse.BooleanOptionalAction)
 
 args = parser.parse_args()
 author_identifier = args.author_identifier
-links = args.links
+record_ids = args.record_ids
 
 # Get the current date
 current_date = datetime.now()
@@ -33,8 +33,8 @@ records = get_author_records(
 )
 
 
-def update_coauthor(coauthor, new_author_info, year, link):
-    coauthor["links"].append(link)
+def update_coauthor(coauthor, new_author_info, year, record_id):
+    coauthor["record_ids"].append(record_id)
     # update year
     if coauthor["year"] < year:
         coauthor["year"] = year
@@ -44,7 +44,7 @@ def update_coauthor(coauthor, new_author_info, year, link):
             coauthor["affiliations"].append(new_author_info["affiliations"])
 
 
-def create_coauthor(author, year, link):
+def create_coauthor(author, year, record_id):
     if "affiliations" in author:
         affiliations = author["affiliations"]
     else:
@@ -53,7 +53,7 @@ def create_coauthor(author, year, link):
         "name": author["person_or_org"]["name"],
         "affiliations": affiliations,
         "year": year,
-        "links": [link],
+        "record_ids": [record_id],
     }
 
 
@@ -63,7 +63,7 @@ coauthors = {}
 for article in records:
     year = article["metadata"]["publication_date"].split("-")[0]
     authors = article["metadata"]["creators"]
-    link = article["links"]["self_html"]
+    record_id = article["id"]
     for author in authors:
         name = author["person_or_org"]["name"]
         if "identifiers" in author["person_or_org"]:
@@ -78,28 +78,28 @@ for article in records:
             if clpid:
                 if clpid in coauthors:
                     coauthor = coauthors[clpid]
-                    update_coauthor(coauthor, author, year, link)
+                    update_coauthor(coauthor, author, year, record_id)
                 elif orcid:
                     if orcid in coauthors:
                         # If the orcid record got created first, use that
                         coauthor = coauthors[orcid]
-                        update_coauthor(coauthor, author, year, link)
+                        update_coauthor(coauthor, author, year, record_id)
                     else:
-                        coauthors[clpid] = create_coauthor(author, year, link)
+                        coauthors[clpid] = create_coauthor(author, year, record_id)
                 else:
-                    coauthors[clpid] = create_coauthor(author, year, link)
+                    coauthors[clpid] = create_coauthor(author, year, record_id)
             elif orcid:
                 if orcid in coauthors:
                     coauthor = coauthors[author_identifier]
-                    update_coauthor(coauthor, author, year, link)
+                    update_coauthor(coauthor, author, year, record_id)
                 else:
-                    coauthors[orcid] = create_coauthor(author, year, link)
+                    coauthors[orcid] = create_coauthor(author, year, record_id)
         else:
             if name in coauthors:
                 coauthor = coauthors[name]
-                update_coauthor(coauthor, author, year, link)
+                update_coauthor(coauthor, author, year, record_id)
             else:
-                coauthors[name] = create_coauthor(author, year, link)
+                coauthors[name] = create_coauthor(author, year, record_id)
 
 # The author shouldn't be a coauthor
 coauthors.pop(author_identifier)
@@ -121,20 +121,21 @@ for coauthor in coauthors:
             a_string = affiliation["name"]
         else:
             a_string += f", {affiliation['name']} "
-    if links:
-        link_string = ""
-        for link in coauthors[coauthor]["links"]:
-            if link_string == "":
-                link_string = link
+    if record_ids:
+        record_id_string = ""
+        for record_id in coauthors[coauthor]["record_ids"]:
+            if record_id_string == "":
+                record_id_string = record_id
             else:
-                link_string += f"; {link}"
+                record_id_string += f"; {record_id}"
         data.append(
             [
                 "A:",
                 coauthors[coauthor]["name"],
                 a_string,
+                "",
                 coauthors[coauthor]["year"],
-                link_string,
+                record_id_string,
             ]
         )
     else:
