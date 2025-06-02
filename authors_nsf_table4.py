@@ -10,9 +10,7 @@ parser = argparse.ArgumentParser(
     prog="nsf_c_s",
     description="Harvests content from CaltechAUTHORS for a NSF formetted collaborator report",
 )
-parser.add_argument(
-    "author_identifier", type=str, help="The old identifier to be replaced"
-)
+parser.add_argument("author_identifier", type=str, help="The author identifier")
 parser.add_argument("--record_ids", action=argparse.BooleanOptionalAction)
 
 args = parser.parse_args()
