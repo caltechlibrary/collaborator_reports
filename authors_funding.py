@@ -20,8 +20,9 @@ author_identifier = args.author_identifier
 current_date = datetime.now()
 
 # Need publications within the last 12 months
-start_date = current_date - relativedelta(months=12)
-start_date = start_date.strftime("%Y-%m-%d")
+#start_date = current_date - relativedelta(months=12)
+#start_date = start_date.strftime("%Y-%m-%d")
+start_date = "2019-01-01"  # For testing purposes, use a fixed date
 
 print(f"Searching for records after {start_date} for author {author_identifier}")
 
@@ -63,13 +64,15 @@ def create_funding(funding, year, record_id):
 
 
 funders = {}
-
+titles = {}
 
 for article in records:
     year = article["metadata"]["publication_date"].split("-")[0]
+    record_id = article["id"]
+    titles[record_id] = article["metadata"].get("title", "No Title Provided")
+
     if "funding" in article["metadata"]:
         funding = article["metadata"]["funding"]
-        record_id = article["id"]
         for fund in funding:
             name = fund["funder"]["name"]
             if "id" in fund["funder"]:
@@ -92,7 +95,8 @@ header = [
     "Funder ROR",
     "Grant Number",
     "Last Active",
-    "Article",
+    "Article IDs",
+    "Article Titles",
 ]
 
 
@@ -104,11 +108,16 @@ for funder in funders:
     if awards:
         for award_number in awards.keys():
             record_str = ""
+            title_str = ""
             for record_id in awards[award_number]:
                 if record_str == "":
                     record_str = f"{record_id}"
                 else:
                     record_str += f", {record_id}"
+                if title_str == "":
+                    title_str = titles[record_id]
+                else:
+                    title_str += f", {titles[record_id]}"
             data.append(
                 [
                     funder_data["name"],
@@ -116,15 +125,21 @@ for funder in funders:
                     award_number,
                     funder_data["year"],
                     record_str,
+                    title_str,
                 ]
             )
     else:
         record_str = ""
+        title_str = ""
         for record_id in funder_data["record_ids"]:
             if record_str == "":
                 record_str = f"{record_id}"
             else:
                 record_str += f", {record_id}"
+            if title_str == "":
+                title_str = titles[record_id]
+            else:
+                title_str += f", {titles[record_id]}"
         data.append(
             [
                 funder_data["name"],
@@ -132,6 +147,7 @@ for funder in funders:
                 "",
                 funder_data["year"],
                 record_str,
+                title_str,
             ]
         )
 
