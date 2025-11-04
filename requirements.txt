@@ -1,4 +1,5 @@
 argparse
 openpyxl
 datetime
+unidecode
 from ames>=1.2.0
