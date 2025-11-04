@@ -1,5 +1,6 @@
 import argparse
 import openpyxl
+from unidecode import unidecode
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from ames.harvesters import get_author_records
@@ -64,40 +65,41 @@ for article in records:
     record_id = article["id"]
     for author in authors:
         name = author["person_or_org"]["name"]
-        if "identifiers" in author["person_or_org"]:
-            identifiers = author["person_or_org"]["identifiers"]
-            clpid = None
-            orcid = None
-            for identifier in identifiers:
-                if identifier["scheme"] == "clpid":
-                    clpid = identifier["identifier"]
-                if identifier["scheme"] == "orcid":
-                    orcid = identifier["identifier"]
-            if clpid:
-                if clpid in coauthors:
-                    coauthor = coauthors[clpid]
-                    update_coauthor(coauthor, author, year, record_id)
-                elif orcid:
-                    if orcid in coauthors:
-                        # If the orcid record got created first, use that
-                        coauthor = coauthors[orcid]
+        if author["person_or_org"]["type"] == "personal":
+            if "identifiers" in author["person_or_org"]:
+                identifiers = author["person_or_org"]["identifiers"]
+                clpid = None
+                orcid = None
+                for identifier in identifiers:
+                    if identifier["scheme"] == "clpid":
+                        clpid = identifier["identifier"]
+                    if identifier["scheme"] == "orcid":
+                        orcid = identifier["identifier"]
+                if clpid:
+                    if clpid in coauthors:
+                        coauthor = coauthors[clpid]
                         update_coauthor(coauthor, author, year, record_id)
+                    elif orcid:
+                        if orcid in coauthors:
+                            # If the orcid record got created first, use that
+                            coauthor = coauthors[orcid]
+                            update_coauthor(coauthor, author, year, record_id)
+                        else:
+                            coauthors[clpid] = create_coauthor(author, year, record_id)
                     else:
                         coauthors[clpid] = create_coauthor(author, year, record_id)
-                else:
-                    coauthors[clpid] = create_coauthor(author, year, record_id)
-            elif orcid:
-                if orcid in coauthors:
-                    coauthor = coauthors[author_identifier]
+                elif orcid:
+                    if orcid in coauthors:
+                        coauthor = coauthors[author_identifier]
+                        update_coauthor(coauthor, author, year, record_id)
+                    else:
+                        coauthors[orcid] = create_coauthor(author, year, record_id)
+            else:
+                if name in coauthors:
+                    coauthor = coauthors[name]
                     update_coauthor(coauthor, author, year, record_id)
                 else:
-                    coauthors[orcid] = create_coauthor(author, year, record_id)
-        else:
-            if name in coauthors:
-                coauthor = coauthors[name]
-                update_coauthor(coauthor, author, year, record_id)
-            else:
-                coauthors[name] = create_coauthor(author, year, record_id)
+                    coauthors[name] = create_coauthor(author, year, record_id)
 
 # The author shouldn't be a coauthor
 coauthors.pop(author_identifier)
@@ -133,8 +135,8 @@ for coauthor in coauthors:
         data.append(
             [
                 "A:",
-                coauthors[coauthor]["name"],
-                a_string,
+                unidecode(coauthors[coauthor]["name"]),
+                unidecode(a_string),
                 "",
                 coauthors[coauthor]["year"],
                 record_id_string,
@@ -173,7 +175,7 @@ for col_index in range(1, len(data[0]) + 1):
     sheet.column_dimensions[column_letter].width = 20
 
 # Save the workbook to a file
-output_filename = "nsf_collaborator_report.xlsx"
+output_filename = f"{author_identifier}_nsf_collaborator_report.xlsx"
 workbook.save(output_filename)
 
 print(f"Report saved to {output_filename}")
