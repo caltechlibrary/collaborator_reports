@@ -24,5 +24,12 @@ python authors_nsf_table4.py <identifier>
 Where `<identifier>` is the identifier of the individual you want to run a report
 
 This will generate a file <identifier>_nsf_collaborator_report.xlsx with the contents of
-table 4 part A
+table 4 part A.
+
+If you want the CaltechAUTHORS identifiers for each author to trackback
+problems, add the `--record_ids` flag:
+
+```bash
+python authors_nsf_table4.py <identifier> --record_ids
+```
 

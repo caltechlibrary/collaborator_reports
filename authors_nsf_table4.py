@@ -183,3 +183,28 @@ output_filename = f"{author_identifier}_nsf_collaborator_report.xlsx"
 workbook.save(output_filename)
 
 print(f"Report saved to {output_filename}")
+
+
+print(
+    f"""
+I’ve attached the NSF collaborator report Table 4 for researcher
+{author_identifier} from CaltechAUTHORS. We try to collect the 
+most accurate information about researcher affiliations, but the 
+process is automated and can make mistakes. Let us know if you notice any problems.
+
+You can take a look at the publications for this researcher that are in CaltechAUTHORS at 
+https://authors.library.caltech.edu/search?q=metadata.creators.person_or_org.identifiers.identifier%3A%22{author_identifier}%22&l=list&p=1&s=10&sort=publication. 
+If any publications are missing, please let us know and we can re-run the report. 
+"""
+)
+if record_ids:
+    print(
+        """
+Column F in the spreadsheet includes the record identifiers which you can use to search in CaltechAUTHORS so you can see which collaborators come from which publications. This column should not be copied over to the NSF report.
+"""
+    )
+print(
+    """
+Let me know if you have any questions or notice any issues.
+      """
+)
