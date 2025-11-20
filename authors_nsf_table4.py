@@ -92,6 +92,10 @@ for article in records:
                     if orcid in coauthors:
                         coauthor = coauthors[author_identifier]
                         update_coauthor(coauthor, author, year, record_id)
+                    elif name in coauthors:
+                        # If the name record got created first, use that
+                        coauthor = coauthors[name]
+                        update_coauthor(coauthor, author, year, record_id)
                     else:
                         coauthors[orcid] = create_coauthor(author, year, record_id)
             else:

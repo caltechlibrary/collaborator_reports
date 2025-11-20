@@ -3,7 +3,7 @@
 Collaborator Reports
 
 This package will generate collaborator reports for funding agencies from
-various data sources.
+CaltechAUTHORS.
 
 Requires: 
 
@@ -23,9 +23,6 @@ python authors_nsf_table4.py <identifier>
 
 Where `<identifier>` is the identifier of the individual you want to run a report
 
-This will generate a file nsf_collaborator_report.xlsx with the contents of
+This will generate a file <identifier>_nsf_collaborator_report.xlsx with the contents of
 table 4 part A
 
-## Additional sources
-Additional scripts in this repository for ADS and WOS are using an older
-approach and may or may not work. 
